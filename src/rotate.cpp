@@ -14,6 +14,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include "input_output.hpp"
+#include "crop.hpp"
 
 using namespace cv;
 using namespace std;
@@ -63,7 +64,8 @@ int main( int argc, char** argv ){
 
 	vector<string> imageNames;
 	imageNames = getFileList("/home/yinghongli/Documents/DeepFace2/Adele", ".jpg");
-	cout<<imageNames.size()<<endl;
+	//cout<<imageNames.size()<<endl;
+	//outputToFile("/home/yinghongli/Documents/Image_preprocessing/filenames.yaml", imageNames, "write");
 
 	Mat image;
 	image = imread(image_name, CV_LOAD_IMAGE_COLOR);

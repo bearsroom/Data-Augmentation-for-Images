@@ -9,8 +9,6 @@
 
 #include "input_output.hpp"
 
-using namespace std;
-
 vector<string> getFileList(const char* path, const char* type){
 	// get a list of filenames with type defined in a path provided
 	vector<string> fileNames;
@@ -31,4 +29,27 @@ vector<string> getFileList(const char* path, const char* type){
 	return fileNames; // possible to be empty if the directory not existed
 }
 
+Mat getLandmarks(const char* filenames){
 
+}
+
+// write or append the data into a file
+template<class T>
+void outputToFile(const char* filename, vector<T> data, char* option){
+//	if (option == "write")
+//		FileStorage fs(filename, FileStorage::WRITE);
+//	else if(option == "append")
+//		FileStorage fs(filename, FileStorage::APPEND);
+//	else{
+//		cout<<"Option non valid: write or append allowed"<<endl;
+//		return;
+//	}
+
+	FileStorage fs(filename, FileStorage::WRITE);
+	fs<<"Number of files in this directory :"<<data.size();
+
+	for (typename vector<T>::iterator it = data.begin(); it != data.end(); ++it){
+		fs<<*it<<'\n';
+	}
+
+}

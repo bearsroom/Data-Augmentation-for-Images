@@ -17,9 +17,14 @@
 #include <opencv2/core/core.hpp>
 
 using namespace std;
+using namespace cv;
 
 vector<string> getFileList(const char* path, const char* type);
 
+Mat getLandmarks(const char* filename);
 
+// write or append the data into a file
+template<class T>
+void outputToFile(const char* filename, vector<T> data, char* option);
 
 #endif /* INPUT_OUTPUT_HPP_ */
