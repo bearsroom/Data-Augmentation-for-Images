@@ -13,12 +13,14 @@
 #include <opencv/cv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
+#include "input_output.hpp"
 
 using namespace cv;
 using namespace std;
 
-double calculate_angle(vector<double> LE, vector<double> RE)
-{
+//vector<string> getFileList(const char* path, const char* type){}
+
+double calculate_angle(vector<double> LE, vector<double> RE){
 	// calculate the angle for rotation
 	double param = (RE[0]-LE[0])/sqrt(pow(RE[0]-LE[0], 2)+pow(RE[1]-LE[1], 2));
 	double angle = acos(param)*180.0/M_PI;
@@ -26,8 +28,7 @@ double calculate_angle(vector<double> LE, vector<double> RE)
 	return angle;
 }
 
-Mat coordinates_transform(cv::Mat& coordinates, cv::Mat& M)
-{
+Mat coordinates_transform(cv::Mat& coordinates, cv::Mat& M){
 	// verify the dimension of input coordinates: a 2-by-n matrix
 	if (coordinates.rows != 2)
 		;
@@ -41,8 +42,7 @@ Mat coordinates_transform(cv::Mat& coordinates, cv::Mat& M)
 	}
 }
 
-Mat rotate(cv::Mat& src, double angle, cv::Mat& dst, cv::Mat& coordinates)
-{
+Mat rotate(cv::Mat& src, double angle, cv::Mat& dst, cv::Mat& coordinates){
     // get rotation matrix for rotating the image around its center
 	cv::Point2f center(src.cols/2.0, src.rows/2.0);
     cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
@@ -58,15 +58,17 @@ Mat rotate(cv::Mat& src, double angle, cv::Mat& dst, cv::Mat& coordinates)
     return coordinates_transform(coordinates, rot);
 }
 
-int main( int argc, char** argv )
-{
+int main( int argc, char** argv ){
 	char* image_name = "/home/yinghongli/Documents/DeepFace2/Adele/79.jpg";
+
+	vector<string> imageNames;
+	imageNames = getFileList("/home/yinghongli/Documents/DeepFace2/Adele", ".jpg");
+	cout<<imageNames.size()<<endl;
 
 	Mat image;
 	image = imread(image_name, CV_LOAD_IMAGE_COLOR);
 
-	if(!image.data)
-	{
+	if(!image.data){
 		printf("No image data \n");
 		return -1;
 	}
