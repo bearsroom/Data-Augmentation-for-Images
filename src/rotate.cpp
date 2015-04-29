@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
+#include <stdio.h>
 #include <opencv/cv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
@@ -100,7 +101,35 @@ int main( int argc, char** argv ){
 	cout<<new_landmarks<<endl;
 
 	char* output_path = "/home/yinghongli/Documents/Image_preprocessing/79.jpg";
+	//char* buffer;
+	//sprintf(buffer, "%s%d%s", output_path, 79, ".jpg");
+	//cout<<buffer;
 	imwrite(output_path, new_image);
+
+	//Crop the region
+	struct Crop ROI(
+		cv::Point2f((new_landmarks.at<double>(0,0)+new_landmarks.at<double>(0,1))/2., (new_landmarks.at<double>(1,0)+new_landmarks.at<double>(1,1))/2.),
+		cv::Size2f((new_landmarks.at<double>(0,1)-new_landmarks.at<double>(0,0))*4, (new_landmarks.at<double>(0,1)-new_landmarks.at<double>(0,0))*3/2.),
+		0
+	);
+
+	//Check if the region intersect the bounding box of old image
+	struct Crop ROIOnOI(
+			cv::Point2f((landmarks.at<double>(0,0)+landmarks.at<double>(0,1))/2., (landmarks.at<double>(1,0)+landmarks.at<double>(1,1))/2.),
+			cv::Size2f((new_landmarks.at<double>(0,1)-new_landmarks.at<double>(0,0))*4, (new_landmarks.at<double>(0,1)-new_landmarks.at<double>(0,0))*3/2.),
+			-angle
+	);
+
+	double scale = imageContainsRect(image, ROIOnOI);
+	if (scale != -1){
+		ROI.size.width = ROI.size.width*scale;
+		ROI.size.height = ROI.size.height*scale;
+	}
+
+	Mat newROI = cropROI(new_image, ROI);
+	output_path = "/home/yinghongli/Documents/Image_preprocessing/79_cropped.jpg";
+	imwrite(output_path, newROI);
+
 	return 0;
 }
 

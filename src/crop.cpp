@@ -15,16 +15,60 @@ Mat maxSizeCroppedRegion(cv::Point2d center, double ratio, cv::Mat rotatedImage,
 
 }
 
-// judge whether the crop is valid on image
-bool rectContainsRect(cv::Mat originalImage, struct Crop crop, double angle){
-	// structure of Mat crop: (crop[0], crop[1])
-	cv::Rect container(0, 0, originalImage.cols, originalImage.rows);
-	cv::RotatedRect content(crop.center, crop.size, crop.angle-angle);
-	Point2f contentVs[4];
-	content.points(contentVs);
-	if (container.contains(contentVs[0]))
-		return true;
-	else
-		return false;
+// Crop the region of interest
+Mat cropROI(cv::Mat& image, struct Crop& crop){
+	cv::Point2f topLeft(crop.center.x-crop.size.width/2., crop.center.y-crop.size.height/2.);
+	cv::Rect ROI(topLeft, crop.size);
+	return image(ROI).clone();
+}
+
+// judge whether the crop is valid on image, validate on original source oI(not rotated)
+// judge whether an image contains a boundingRect
+// need transform of the crop ROI to equivalent ROI on original source
+double imageContainsRect(cv::Mat oI, struct Crop cropOnOI){
+	cv::Rect container(0, 0, oI.cols, oI.rows);
+	cv::RotatedRect content(cropOnOI.center, cropOnOI.size, cropOnOI.angle);
+	Point2f Vs[4]; // 4 vertices
+	content.points(Vs);
+	bool contain[4];
+	contain[0] = container.contains(Vs[0]); // check if vertice 0 is in OI
+	contain[1] = container.contains(Vs[1]); // check if vertice 1 is in OI
+	contain[2] = container.contains(Vs[2]); // check if vertice 2 is in OI
+	contain[3] = container.contains(Vs[3]); // check if vertice 3 is in OI
+	if (contain[0]&&contain[1]&&contain[2]&&contain[3])
+		return -1;
+	else{
+		double s = 1;
+		double s1 = 1;
+		double h1;
+		double w1;
+		for (int i=0; i<4; i++){
+			if (contain[i] == false){
+				if (Vs[i].y <= 0 && Vs[i].x >= Vs[i].y && Vs[i].x >= oI.cols-Vs[i].y){
+					// case 1
+					h1 = cropOnOI.center.y;
+					s1 = h1/(cropOnOI.center.y - Vs[i].y);
+				}
+				else if (Vs[i].x >= oI.cols && Vs[i].y >= oI.cols-Vs[i].x && Vs[i].y <= Vs[i].x-oI.cols+oI.rows){
+					// case 2
+					w1 = oI.cols - cropOnOI.center.x;
+					s1 = w1/(Vs[i].x - cropOnOI.center.x);
+				}
+				else if (Vs[i].y >= oI.rows && Vs[i].x >= oI.rows-Vs[i].y && Vs[i].x <= Vs[i].y+oI.cols-oI.rows){
+					// case 3
+					h1 = oI.rows - cropOnOI.center.y;
+					s1 = h1/(Vs[i].y - cropOnOI.center.y);
+				}
+				else if (Vs[i].x <= 0 && Vs[i].y >= Vs[i].x && Vs[i].y <= oI.rows-Vs[i].x){
+					// case 4
+					w1 = cropOnOI.center.x;
+					s1 = w1/(cropOnOI.center.x - Vs[i].x);
+				}
+			}
+			if (s1 < s)
+				s = s1;
+		}
+		return s;
+	}
 }
 
