@@ -30,7 +30,7 @@ vector<string> getFileList(const char* path, const char* type){
 }
 
 Mat getLandmarks(const char* filenames){
-
+	return cv::Mat();
 }
 
 // write or append the data into a file

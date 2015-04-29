@@ -19,7 +19,7 @@ using namespace cv;
 #ifndef CROP_HPP_
 #define CROP_HPP_
 
-struct Crop{ // represent a bounding box with center
+struct Crop{ // represent a ROI
 	cv::Point2f center;
 	cv::Size2f size;
 	float angle;
@@ -31,9 +31,6 @@ struct Crop{ // represent a bounding box with center
 	}
 };
 
-// determine the maximum size of bounding-box having ratio={width/height} in rotated image
-Mat maxSizeCroppedRegion(cv::Point2d center, double ratio, cv::Mat rotatedImage, cv::RotatedRect oldBound);
-
 // Crop the region of interest
 Mat cropROI(cv::Mat& image, struct Crop& crop);
 
@@ -42,7 +39,8 @@ Mat cropROI(cv::Mat& image, struct Crop& crop);
 // if not, return s as the scale of the crop to apply in order to have no intersection
 double imageContainsRect(cv::Mat originalImage, struct Crop cropOnOI);
 
-
+// return multiple ROIs of multiple scales with the same center
+vector<struct Crop> multiScaleROI(cv::Point2f center, cv::Size2f maxSize, vector<double> scales, double angle);
 
 
 #endif /* CROP_HPP_ */

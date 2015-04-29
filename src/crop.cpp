@@ -9,12 +9,6 @@
 
 #include "crop.hpp"
 
-// determine the maximum size of bounding-box having ratio={width/height} in rotated image
-// output: {maxWidth, maxHeight}
-Mat maxSizeCroppedRegion(cv::Point2d center, double ratio, cv::Mat rotatedImage, cv::RotatedRect oldBound){
-
-}
-
 // Crop the region of interest
 Mat cropROI(cv::Mat& image, struct Crop& crop){
 	cv::Point2f topLeft(crop.center.x-crop.size.width/2., crop.center.y-crop.size.height/2.);
@@ -72,3 +66,15 @@ double imageContainsRect(cv::Mat oI, struct Crop cropOnOI){
 	}
 }
 
+// return multiple ROIs of multiple scales with the same center
+vector<struct Crop> multiScaleROI(cv::Point2f center, cv::Size2f maxSize, vector<double> scales, double angle){
+	vector<Crop> ROIs;
+	for (vector<double>::iterator it = scales.begin(); it != scales.end(); ++it){
+		ROIs.push_back(Crop(
+				center,
+				cv::Size2f((*it)*maxSize.width, (*it)*maxSize.height),
+				angle
+		));
+	}
+	return ROIs;
+}
