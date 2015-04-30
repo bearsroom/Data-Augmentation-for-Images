@@ -9,6 +9,7 @@
 #include <fstream>
 #include <math.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <opencv/cv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
@@ -19,45 +20,37 @@
 using namespace std;
 using namespace cv;
 
-int main( int argc, char** argv ){
-	//char* imageName = "/home/yinghongli/Documents/DeepFace2/Adele/79.jpg";
-
-	vector<string> imageNames;
-	vector<string> corNames;
-	char* inputPath = "/home/yinghongli/Documents/DeepFace2/Adele";
-	imageNames = getFileList(inputPath, ".jpg");
-	corNames = getFileList(inputPath, ".cor");
-	cout<<imageNames[0]<<endl;
-	cout<<corNames[0]<<endl;
-	//outputToFile("/home/yinghongli/Documents/Image_preprocessing/filenames.yaml", imageNames, "write");
+bool image_augmentation(const char* inputPath, const char* fileName, const char* outputPath){
 
 	Mat image;
-	char fileName[100];
-	sprintf(fileName, "%s/%s%s", inputPath, imageNames[0].c_str(), ".jpg");
-	cout<<fileName<<endl;
-	image = imread(fileName, CV_LOAD_IMAGE_COLOR);
+	char buffer[100];
+	sprintf(buffer, "%s/%s%s", inputPath, fileName, ".jpg");
+	image = imread(buffer, CV_LOAD_IMAGE_COLOR);
 
-	if(!image.data){
-		printf("No image data \n");
-		return -1;
+	if(!image.data){ // check if the image existed
+		cout<<"No image data"<<endl;
+		return false;
 	}
 
+	// check if the associated .cor file existed
+	sprintf(buffer, "%s%s", fileName, ".cor");
+	cout<<buffer<<endl;
+	if (!searchFile(inputPath, buffer)){
+		cout<<"No landmarks data"<<endl;
+		return false;
+	}
+
+	sprintf(buffer, "%s/%s%s", inputPath, fileName, ".cor");
+	vector<cv::Point2f> landmarks = getLandmarks(buffer); // get the landmarks from .cor file
+	cout<<landmarks.size()<<endl;
+
 	Mat newImage; // output image
+	double angle = calculateAngle(landmarks[0], landmarks[1]); // calculate the angle for rotation
+	cv::Mat rot = rotate(image, angle, newImage, landmarks); // rotate the image
+	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot); // calculate the new lanmarks on new image after rotation
 
-	vector<cv::Point2f> landmarks;
-	landmarks.push_back(cv::Point2f(78.52, 58.90)); // LE
-	landmarks.push_back(cv::Point2f(127.92, 80.79)); // RE
-	landmarks.push_back(cv::Point2f(102.26, 96.34)); // N
-	landmarks.push_back(cv::Point2f(59.25, 117.68)); // LM
-	landmarks.push_back(cv::Point2f(97.67, 135.35)); // RM
-
-	double angle = calculateAngle(landmarks[0], landmarks[1]);
-	cv::Mat rot = rotate(image, angle, newImage, landmarks);
-	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot);
-
-	char* output_path = "/home/yinghongli/Documents/Image_preprocessing";
-	sprintf(fileName, "%s/testC.jpg", output_path);
-	imwrite(fileName, newImage);
+	sprintf(buffer, "%s/%s_test.jpg", outputPath, fileName);
+	imwrite(buffer, newImage);
 
 	//Crop the regions
 	cv::Point2f center = Point2f((newLandmarks[0].x+newLandmarks[1].x)/2., (newLandmarks[0].y+newLandmarks[1].y)/2.);
@@ -69,19 +62,42 @@ int main( int argc, char** argv ){
 	scales.push_back(0.5);
 	vector<Crop> ROIs = multiScaleROI(center, maxSize, scales, 0);
 
-	//Check if the region intersect the bounding box of old image
+	//Check if a region intersect the bounding box of old image
 	vector<Crop> ROIsOnOI = multiScaleROI(oldCenter, maxSize, scales, -angle);
-	output_path = "/home/yinghongli/Documents/Image_preprocessing";
 	for (int i=0; i<ROIs.size(); i++){
 		double scale = imageContainsRect(image, ROIsOnOI[i]);
-		if (scale != -1){
-			ROIs[i].size.width = ROIs[i].size.width*scale;
+		if (scale != -1){ // the ROI intersect
+			ROIs[i].size.width = ROIs[i].size.width*scale; // resize the ROI
 			ROIs[i].size.height = ROIs[i].size.height*scale;
 		}
 
-		Mat newROI = cropROI(newImage, ROIs[i]);
-		sprintf(fileName, "%s/testCropped_%.1f.jpg", output_path, scales[i]);
-		imwrite(fileName, newROI);
+		Mat newROI = cropROI(newImage, ROIs[i]); // new cropped image
+		sprintf(buffer, "%s/%s_testCropped_%.1f.jpg", outputPath, fileName, scales[i]);
+		imwrite(buffer, newROI);
+	}
+	return true;
+}
+
+int main( int argc, char** argv ){
+
+	char* dbPath = "/home/yinghongli/Documents/DeepFace2";
+	vector<string> people;
+	people = getPathList(dbPath, false);
+	cout<<"Number of people: "<<people.size()<<endl;
+
+	vector<string> imageNames;
+	char inputPath[100];
+	sprintf(inputPath, "%s/%s", dbPath, people[0].c_str());
+	cout<<inputPath<<endl;
+	imageNames = getFileList(inputPath, ".jpg");
+
+	const char* outputPath = "/home/yinghongli/Documents/Image_preprocessing";
+	char newPath[100];
+	sprintf(newPath, "%s/%s", outputPath, people[0].c_str());
+	mkdir(newPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+
+	for (int j=0; j<imageNames.size(); j++){
+		image_augmentation(inputPath, imageNames[j].c_str(), newPath);
 	}
 
 	return 0;

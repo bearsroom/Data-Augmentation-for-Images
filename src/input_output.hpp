@@ -11,6 +11,7 @@
 #define INPUT_OUTPUT_HPP_
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <stdio.h>
 #include <dirent.h>
@@ -19,10 +20,13 @@
 using namespace std;
 using namespace cv;
 
+vector<string> getPathList(const char* path, bool absPath); // absPath = true absolute path
 
-vector<string> getFileList(const char* path, const char* type);
+vector<string> getFileList(const char* path, const char* type); // without type at the end of filename
 
-Mat getLandmarks(const char* filename);
+bool searchFile(const char* path, const char* fileName);
+
+vector<Point2f> getLandmarks(const char* fileName);
 
 // write or append the data into a file
 template<class T>
