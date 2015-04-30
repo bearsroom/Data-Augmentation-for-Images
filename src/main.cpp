@@ -20,15 +20,22 @@ using namespace std;
 using namespace cv;
 
 int main( int argc, char** argv ){
-	char* imageName = "/home/yinghongli/Documents/DeepFace2/Adele/79.jpg";
+	//char* imageName = "/home/yinghongli/Documents/DeepFace2/Adele/79.jpg";
 
 	vector<string> imageNames;
-	imageNames = getFileList("/home/yinghongli/Documents/DeepFace2/Adele", ".jpg");
-	//cout<<imageNames.size()<<endl;
+	vector<string> corNames;
+	char* inputPath = "/home/yinghongli/Documents/DeepFace2/Adele";
+	imageNames = getFileList(inputPath, ".jpg");
+	corNames = getFileList(inputPath, ".cor");
+	cout<<imageNames[0]<<endl;
+	cout<<corNames[0]<<endl;
 	//outputToFile("/home/yinghongli/Documents/Image_preprocessing/filenames.yaml", imageNames, "write");
 
 	Mat image;
-	image = imread(imageName, CV_LOAD_IMAGE_COLOR);
+	char fileName[100];
+	sprintf(fileName, "%s/%s%s", inputPath, imageNames[0].c_str(), ".jpg");
+	cout<<fileName<<endl;
+	image = imread(fileName, CV_LOAD_IMAGE_COLOR);
 
 	if(!image.data){
 		printf("No image data \n");
@@ -47,14 +54,10 @@ int main( int argc, char** argv ){
 	double angle = calculateAngle(landmarks[0], landmarks[1]);
 	cv::Mat rot = rotate(image, angle, newImage, landmarks);
 	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot);
-//	cout<<landmarks[0]<<endl;
-//	cout<<newLandmarks[0]<<endl;
 
-	char* output_path = "/home/yinghongli/Documents/Image_preprocessing/79.jpg";
-	//char* buffer;
-	//sprintf(buffer, "%s%d%s", output_path, 79, ".jpg");
-	//cout<<buffer;
-	imwrite(output_path, newImage);
+	char* output_path = "/home/yinghongli/Documents/Image_preprocessing";
+	sprintf(fileName, "%s/testC.jpg", output_path);
+	imwrite(fileName, newImage);
 
 	//Crop the regions
 	cv::Point2f center = Point2f((newLandmarks[0].x+newLandmarks[1].x)/2., (newLandmarks[0].y+newLandmarks[1].y)/2.);
@@ -77,9 +80,8 @@ int main( int argc, char** argv ){
 		}
 
 		Mat newROI = cropROI(newImage, ROIs[i]);
-		char filename[100];
-		sprintf(filename, "%s/%d_cropped_%.1f.jpg", output_path, 79, scales[i]);
-		imwrite(filename, newROI);
+		sprintf(fileName, "%s/testCropped_%.1f.jpg", output_path, scales[i]);
+		imwrite(fileName, newROI);
 	}
 
 	return 0;

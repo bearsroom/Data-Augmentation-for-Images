@@ -10,10 +10,12 @@
 #include "input_output.hpp"
 
 vector<string> getFileList(const char* path, const char* type){
-	// get a list of filenames with type defined in a path provided
-	vector<string> fileNames;
+	// get a list of filenames or directories' names with type defined in a path provided
+	vector<string> outputList;
 	struct dirent *pDirent;
 	DIR *pDir;
+	int typeLength = strlen(type);
+	cout<<typeLength<<endl;
 
 	pDir = opendir(path);
 	if (pDir == NULL){
@@ -21,12 +23,18 @@ vector<string> getFileList(const char* path, const char* type){
 	}
 	else{
 		while ((pDirent = readdir(pDir)) != NULL){
-			if (strstr(pDirent->d_name, type) != NULL)
-			fileNames.push_back(pDirent->d_name);
+			if (strstr(pDirent->d_name, type) != NULL){
+				char fileName[strlen(pDirent->d_name)-typeLength];
+				int fileNameLength = sizeof(fileName);
+				for (int i=0; i<fileNameLength; i++)
+					fileName[i] = pDirent->d_name[i];
+				fileName[fileNameLength] = '\0'; // the end of the char array
+				outputList.push_back(fileName);
+			}
 		}
 	}
 	closedir (pDir);
-	return fileNames; // possible to be empty if the directory not existed
+	return outputList; // outputList possible to be empty if the directory not existed
 }
 
 Mat getLandmarks(const char* filenames){
