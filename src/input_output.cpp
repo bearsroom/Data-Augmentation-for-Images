@@ -98,23 +98,20 @@ vector<Point2f> getLandmarks(const char* fileName){
 	return landmarks;
 }
 
-// write or append the data into a file
-template<class T>
-void outputToFile(const char* filename, vector<T> data, char* option){
-//	if (option == "write")
-//		FileStorage fs(filename, FileStorage::WRITE);
-//	else if(option == "append")
-//		FileStorage fs(filename, FileStorage::APPEND);
-//	else{
-//		cout<<"Option non valid: write or append allowed"<<endl;
-//		return;
-//	}
+void outputLandmarks(const char* filename, vector<cv::Point2f> landmarks, cv::Size2f size){
+	ofstream fs(filename);
+	if (fs.is_open()){
+		// width and height
+		fs<<"width: "<<size.width<<" "<<"height: "<<size.height<<"\n";
 
-	FileStorage fs(filename, FileStorage::WRITE);
-	fs<<"Number of files in this directory :"<<data.size();
-
-	for (typename vector<T>::iterator it = data.begin(); it != data.end(); ++it){
-		fs<<*it<<'\n';
+		// new landmarks
+		fs<<"eye_left:  "<<landmarks[0].x<<"  "<<landmarks[0].y<<"\n";
+		fs<<"eye_right:  "<<landmarks[1].x<<"  "<<landmarks[1].y<<"\n";
+		fs<<"nose:  "<<landmarks[2].x<<"  "<<landmarks[2].y<<"\n";
+		fs<<"mouth_left:  "<<landmarks[3].x<<"  "<<landmarks[3].y<<"\n";
+		fs<<"mouth_right:  "<<landmarks[4].x<<"  "<<landmarks[4].y<<"\n";
 	}
+	else cout<<"Cannot write the file"<<endl;
+	return;
 
 }

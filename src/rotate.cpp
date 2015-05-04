@@ -22,8 +22,8 @@ using namespace std;
 
 double calculateAngle(cv::Point2f LE, cv::Point2f RE){
 	// calculate the angle for rotation
-	double param = (RE.x-LE.x)/sqrt(pow(RE.x-LE.x, 2)+pow(RE.y-LE.y, 2));
-	double angle = acos(param)*180.0/M_PI;
+	double param = (RE.y-LE.y)/sqrt(pow(RE.x-LE.x, 2)+pow(RE.y-LE.y, 2));
+	double angle = asin(param)*180.0/M_PI;
 	return angle;
 }
 

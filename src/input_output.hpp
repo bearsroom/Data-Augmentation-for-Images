@@ -28,8 +28,6 @@ bool searchFile(const char* path, const char* fileName);
 
 vector<Point2f> getLandmarks(const char* fileName);
 
-// write or append the data into a file
-template<class T>
-void outputToFile(const char* filename, vector<T> data, char* option);
+void outputLandmarks(const char* filename, vector<cv::Point2f> newLandmarks, cv::Size2f newSize);
 
 #endif /* INPUT_OUTPUT_HPP_ */

@@ -32,9 +32,11 @@ bool image_augmentation(const char* inputPath, const char* fileName, const char*
 		return false;
 	}
 
+	sprintf(buffer, "%s/%s.jpg", outputPath, fileName);
+	imwrite(buffer, image); // copy the original image
+
 	// check if the associated .cor file existed
 	sprintf(buffer, "%s%s", fileName, ".cor");
-	cout<<buffer<<endl;
 	if (!searchFile(inputPath, buffer)){
 		cout<<"No landmarks data"<<endl;
 		return false;
@@ -42,15 +44,17 @@ bool image_augmentation(const char* inputPath, const char* fileName, const char*
 
 	sprintf(buffer, "%s/%s%s", inputPath, fileName, ".cor");
 	vector<cv::Point2f> landmarks = getLandmarks(buffer); // get the landmarks from .cor file
-	cout<<landmarks.size()<<endl;
 
 	Mat newImage; // output image
 	double angle = calculateAngle(landmarks[0], landmarks[1]); // calculate the angle for rotation
 	cv::Mat rot = rotate(image, angle, newImage, landmarks); // rotate the image
+
 	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot); // calculate the new lanmarks on new image after rotation
+	sprintf(buffer, "%s/%s_new.cor", outputPath, fileName);
+	outputLandmarks(buffer, newLandmarks, cv::Size2f(newImage.cols, newImage.rows));
 
 	sprintf(buffer, "%s/%s_test.jpg", outputPath, fileName);
-	imwrite(buffer, newImage);
+	imwrite(buffer, newImage); // create the new image after rotation
 
 	//Crop the regions
 	cv::Point2f center = Point2f((newLandmarks[0].x+newLandmarks[1].x)/2., (newLandmarks[0].y+newLandmarks[1].y)/2.);
@@ -88,16 +92,19 @@ int main( int argc, char** argv ){
 	vector<string> imageNames;
 	char inputPath[100];
 	sprintf(inputPath, "%s/%s", dbPath, people[0].c_str());
-	cout<<inputPath<<endl;
+//	cout<<inputPath<<endl;
 	imageNames = getFileList(inputPath, ".jpg");
 
 	const char* outputPath = "/home/yinghongli/Documents/Image_preprocessing";
-	char newPath[100];
-	sprintf(newPath, "%s/%s", outputPath, people[0].c_str());
-	mkdir(newPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+	char personPath[100];
+	sprintf(personPath, "%s/%s", outputPath, people[0].c_str());
+	mkdir(personPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 
+	char imagePath[100];
 	for (int j=0; j<imageNames.size(); j++){
-		image_augmentation(inputPath, imageNames[j].c_str(), newPath);
+		sprintf(imagePath, "%s/%s", personPath, imageNames[j].c_str());
+		mkdir(imagePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+		image_augmentation(inputPath, imageNames[j].c_str(), imagePath);
 	}
 
 	return 0;
