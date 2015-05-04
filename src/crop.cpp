@@ -80,8 +80,9 @@ vector<struct Crop> multiScaleROI(cv::Point2f center, cv::Size2f maxSize, vector
 }
 
 // crop the sequence of ROIs and save to current working directory
-void cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newImage, Point2f center, Point2f oldCenter, Size2f maxSize, vector<double> scales, double angle){
+bool cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newImage, Point2f center, Point2f oldCenter, Size2f maxSize, vector<double> scales, double angle){
 	//Crop the regions
+	bool resize = false;
 	vector<Crop> ROIs = multiScaleROI(center, maxSize, scales, 0);
 
 	//Check if a region intersect the bounding box of old image
@@ -91,6 +92,7 @@ void cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newI
 		if (scale != -1){ // the ROI intersect
 			ROIs[i].size.width = ROIs[i].size.width*scale; // resize the ROI
 			ROIs[i].size.height = ROIs[i].size.height*scale;
+			resize = true;
 		}
 
 		Mat newROI = cropROI(newImage, ROIs[i]); // new cropped image
@@ -98,4 +100,5 @@ void cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newI
 		sprintf(buffer, "%s_%s_%.2f.jpg", fileName, ROIName, scales[i]);
 		imwrite(buffer, newROI);
 	}
+	return resize;
 }

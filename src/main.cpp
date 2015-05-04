@@ -21,7 +21,11 @@
 using namespace std;
 using namespace cv;
 
-bool image_augmentation(const char* inputPath, const char* fileName){ //fileName = id
+void myunexpected(){
+	throw "Unexpected error";
+}
+
+bool image_augmentation(const char* inputPath, const char* fileName) throw(const char*){ //fileName = id
 
 	Mat image;
 	char buffer[100];
@@ -30,7 +34,7 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	image = imread(bufferInput, CV_LOAD_IMAGE_COLOR);
 
 	if(!image.data){ // check if the image existed
-//		cout<<"No image data"<<endl;
+		throw "No image data";
 		return false;
 	}
 	sprintf(buffer, "%s.jpg", fileName);
@@ -39,7 +43,7 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	// check if the associated .cor file existed
 	sprintf(buffer, "%s.cor", fileName);
 	if (!searchFile(inputPath, buffer)){
-//		cout<<"No landmarks data"<<endl;
+		throw "No landmarks data";
 		return false;
 	}
 
@@ -63,13 +67,17 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	//Crop the regions: eyes
 	cv::Point2f eyesCenter = Point2f((newLandmarks[0].x+newLandmarks[1].x)/2., (newLandmarks[0].y+newLandmarks[1].y)/2.);
 	cv::Point2f eyesOldCenter = Point2f((landmarks[0].x+landmarks[1].x)/2., (landmarks[0].y+landmarks[1].y)/2.);
-	cv::Size2f eyesMaxSize = Size2f(eyesWidth*2.5, eyesWidth*2.5*3/4.);
+	cv::Size2f eyesMaxSize = Size2f(eyesWidth*2, eyesWidth*2*3/4.);
 	vector<double> eyesScales;
 	eyesScales.push_back(1);
+	eyesScales.push_back(0.9);
 	eyesScales.push_back(0.8);
-	eyesScales.push_back(0.5);
+	eyesScales.push_back(0.7);
 
-	cropMultiROI(fileName, "eyes", image, newImage, eyesCenter, eyesOldCenter, eyesMaxSize, eyesScales, angle);
+	bool resize = cropMultiROI(fileName, "eyes", image, newImage, eyesCenter, eyesOldCenter, eyesMaxSize, eyesScales, angle);
+	if (resize == true){
+		throw "At least one ROI of eyes has been resized.";
+	}
 
 	//Crop the regions: nose
 	cv::Point2f noseCenter = newLandmarks[2];
@@ -78,7 +86,10 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	vector<double> noseScales;
 	noseScales.push_back(1);
 
-	cropMultiROI(fileName, "nose", image, newImage, noseCenter, noseOldCenter, noseMaxSize, noseScales, angle);
+	resize = cropMultiROI(fileName, "nose", image, newImage, noseCenter, noseOldCenter, noseMaxSize, noseScales, angle);
+	if (resize == true){
+			throw "At least one ROI of nose has been resized.";
+		}
 
 	//Crop the full face
 	cv::Point2f fullCenter = newLandmarks[2];
@@ -87,7 +98,10 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	vector<double> fullScales;
 	fullScales.push_back(1);
 
-	cropMultiROI(fileName, "full", image, newImage, fullCenter, fullOldCenter, fullMaxSize, fullScales, angle);
+	resize = cropMultiROI(fileName, "full", image, newImage, fullCenter, fullOldCenter, fullMaxSize, fullScales, angle);
+	if (resize == true){
+			throw "At least one ROI of full face has been resized.";
+		}
 
 	return true;
 }
@@ -95,33 +109,48 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 int main( int argc, char** argv ){
 
 	char* dbPath = "/home/yinghongli/Documents/DeepFace2";
+	const char* outputPath = "/home/yinghongli/Documents/DeepFace2Aug";
+	ofstream log1("/home/yinghongli/Documents/DeepFace2Aug/log.txt", fstream::app); // create a log file
+	log1<<"input Path: "<<dbPath<<endl;
+	log1<<"output Path: "<<outputPath<<endl<<endl;
+
 	vector<string> people;
 	people = getPathList(dbPath, false);
-	cout<<"Number of people: "<<people.size()<<endl;
+	log1<<"Number of people: "<<people.size()<<endl<<endl;
 
-	vector<string> imageNames;
-	char inputPath[100];
-	sprintf(inputPath, "%s/%s", dbPath, people[0].c_str());
-//	cout<<inputPath<<endl;
-	imageNames = getFileList(inputPath, ".jpg");
-
-	const char* outputPath = "/home/yinghongli/Documents/Image_preprocessing";
-	char personPath[100];
-	sprintf(personPath, "%s/%s", outputPath, people[0].c_str());
-	mkdir(personPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
-
-	char imagePath[100];
-	for (int j=0; j<imageNames.size(); j++){
-		sprintf(imagePath, "%s/%s", personPath, imageNames[j].c_str());
-		mkdir(imagePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
-		chdir(imagePath);// change working directory
+	for (int i=0; i<people.size(); i++){
 		try{
-			image_augmentation(inputPath, imageNames[j].c_str());
-		}catch (std::exception& e) {
-		    std::cerr << "Error occurred when processing on image "<<people[0]<<"/"<<imageNames[j]<<".jpg"<<endl;
-		  }
+			vector<string> imageNames;
+			char inputPath[100];
+			sprintf(inputPath, "%s/%s", dbPath, people[i].c_str());
+			imageNames = getFileList(inputPath, ".jpg");
+
+			char personPath[100];
+			sprintf(personPath, "%s/%s", outputPath, people[i].c_str());
+			mkdir(personPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+			chdir(personPath);
+
+			ofstream logFile("log.txt", fstream::app); // create a log file
+			logFile<<"input Path: "<<inputPath<<endl;
+			logFile<<"output Path: "<<personPath<<endl<<endl;
+			char imagePath[100];
+			for (int j=0; j<imageNames.size(); j++){
+				sprintf(imagePath, "%s/%s", personPath, imageNames[j].c_str());
+				mkdir(imagePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+				chdir(imagePath);// change working directory
+				try{
+					image_augmentation(inputPath, imageNames[j].c_str());
+				}catch (const char* message) {
+					logFile<<imageNames[j]<<".jpg: "<<message<<endl;
+				}
+			}
+			logFile.close();
+		}catch (const char* message){
+			log1<<people[i]<<"/ : "<<message<<endl;
+		}
 	}
 
+	log1.close();
 	cout<<"Image pre-process completed"<<endl;
 	return 0;
 }
