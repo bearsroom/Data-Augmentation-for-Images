@@ -15,6 +15,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
+#include "rotate.hpp"
 
 using namespace std;
 using namespace cv;
@@ -47,6 +48,6 @@ vector<struct Crop> multiScaleROI(cv::Point2f center, cv::Size2f maxSize, vector
 
 // crop the sequence of ROIs and save to current working directory
 // true = resize at least one ROI, false = keep all the original sizes
-bool cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newImage, Point2f center, Point2f oldCenter, Size2f maxSize, vector<double> scales, double angle);
+bool cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newImage, Point2f center, Point2f oldCenter, Size2f maxSize, vector<double> scales, double angle) throw(const char*);
 
 #endif /* CROP_HPP_ */

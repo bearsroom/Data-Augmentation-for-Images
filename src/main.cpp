@@ -26,6 +26,7 @@ void myunexpected(){
 }
 
 bool image_augmentation(const char* inputPath, const char* fileName) throw(const char*){ //fileName = id
+	set_unexpected(myunexpected);
 
 	Mat image;
 	char buffer[100];
@@ -129,6 +130,7 @@ int main( int argc, char** argv ){
 			sprintf(personPath, "%s/%s", outputPath, people[i].c_str());
 			mkdir(personPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 			chdir(personPath);
+			cout<<"Current path: "<<personPath<<" "<<imageNames.size()<<" images"<<endl;
 
 			ofstream logFile("log.txt", fstream::app); // create a log file
 			logFile<<"input Path: "<<inputPath<<endl;
