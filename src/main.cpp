@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
 #include <math.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -20,40 +21,42 @@
 using namespace std;
 using namespace cv;
 
-bool image_augmentation(const char* inputPath, const char* fileName, const char* outputPath){
+bool image_augmentation(const char* inputPath, const char* fileName){ //fileName = id
 
 	Mat image;
 	char buffer[100];
-	sprintf(buffer, "%s/%s%s", inputPath, fileName, ".jpg");
-	image = imread(buffer, CV_LOAD_IMAGE_COLOR);
+	char bufferInput[100];
+	sprintf(bufferInput, "%s/%s%s", inputPath, fileName, ".jpg");
+	image = imread(bufferInput, CV_LOAD_IMAGE_COLOR);
 
 	if(!image.data){ // check if the image existed
 		cout<<"No image data"<<endl;
 		return false;
 	}
-
-	sprintf(buffer, "%s/%s.jpg", outputPath, fileName);
-	imwrite(buffer, image); // copy the original image
+	sprintf(buffer, "%s.jpg", fileName);
+	copyFile(bufferInput, buffer); // copy the original image
 
 	// check if the associated .cor file existed
-	sprintf(buffer, "%s%s", fileName, ".cor");
+	sprintf(buffer, "%s.cor", fileName);
 	if (!searchFile(inputPath, buffer)){
 		cout<<"No landmarks data"<<endl;
 		return false;
 	}
 
-	sprintf(buffer, "%s/%s%s", inputPath, fileName, ".cor");
-	vector<cv::Point2f> landmarks = getLandmarks(buffer); // get the landmarks from .cor file
+	sprintf(bufferInput, "%s/%s.cor", inputPath, fileName);
+	vector<cv::Point2f> landmarks = getLandmarks(bufferInput); // get the landmarks from [id].cor file
+	sprintf(buffer, "%s_old.cor", fileName);
+	copyFile(bufferInput, buffer); // copy the original [id].cor file
 
 	Mat newImage; // output image
 	double angle = calculateAngle(landmarks[0], landmarks[1]); // calculate the angle for rotation
 	cv::Mat rot = rotate(image, angle, newImage, landmarks); // rotate the image
 
-	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot); // calculate the new lanmarks on new image after rotation
-	sprintf(buffer, "%s/%s_new.cor", outputPath, fileName);
-	outputLandmarks(buffer, newLandmarks, cv::Size2f(newImage.cols, newImage.rows));
+	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot); // calculate the new landmarks on new image after rotation
+	sprintf(buffer, "%s_new.cor", fileName);
+	outputLandmarks(buffer, newLandmarks, cv::Size2f(newImage.cols, newImage.rows)); // write new landmarks into [id]_new.cor file
 
-	sprintf(buffer, "%s/%s_test.jpg", outputPath, fileName);
+	sprintf(buffer, "%s_test.jpg", fileName);
 	imwrite(buffer, newImage); // create the new image after rotation
 
 	//Crop the regions
@@ -76,7 +79,7 @@ bool image_augmentation(const char* inputPath, const char* fileName, const char*
 		}
 
 		Mat newROI = cropROI(newImage, ROIs[i]); // new cropped image
-		sprintf(buffer, "%s/%s_testCropped_%.1f.jpg", outputPath, fileName, scales[i]);
+		sprintf(buffer, "%s_testCropped_%.1f.jpg", fileName, scales[i]);
 		imwrite(buffer, newROI);
 	}
 	return true;
@@ -104,7 +107,8 @@ int main( int argc, char** argv ){
 	for (int j=0; j<imageNames.size(); j++){
 		sprintf(imagePath, "%s/%s", personPath, imageNames[j].c_str());
 		mkdir(imagePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
-		image_augmentation(inputPath, imageNames[j].c_str(), imagePath);
+		chdir(imagePath);// change working directory
+		image_augmentation(inputPath, imageNames[j].c_str());
 	}
 
 	return 0;

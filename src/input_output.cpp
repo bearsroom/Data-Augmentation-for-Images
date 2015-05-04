@@ -115,3 +115,12 @@ void outputLandmarks(const char* filename, vector<cv::Point2f> landmarks, cv::Si
 	return;
 
 }
+
+// copy in binary mode
+bool copyFile(const char* SRC, const char* DEST)
+{
+    std::ifstream src(SRC, std::ios::binary);
+    std::ofstream dest(DEST, std::ios::binary);
+    dest << src.rdbuf();
+    return src && dest;
+}

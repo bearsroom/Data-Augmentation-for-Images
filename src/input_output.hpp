@@ -30,4 +30,7 @@ vector<Point2f> getLandmarks(const char* fileName);
 
 void outputLandmarks(const char* filename, vector<cv::Point2f> newLandmarks, cv::Size2f newSize);
 
+// copy in binary mode
+bool copyFile(const char* SRC, const char* DEST);
+
 #endif /* INPUT_OUTPUT_HPP_ */
