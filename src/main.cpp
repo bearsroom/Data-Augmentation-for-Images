@@ -30,7 +30,7 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	image = imread(bufferInput, CV_LOAD_IMAGE_COLOR);
 
 	if(!image.data){ // check if the image existed
-		cout<<"No image data"<<endl;
+//		cout<<"No image data"<<endl;
 		return false;
 	}
 	sprintf(buffer, "%s.jpg", fileName);
@@ -39,7 +39,7 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	// check if the associated .cor file existed
 	sprintf(buffer, "%s.cor", fileName);
 	if (!searchFile(inputPath, buffer)){
-		cout<<"No landmarks data"<<endl;
+//		cout<<"No landmarks data"<<endl;
 		return false;
 	}
 
@@ -59,29 +59,36 @@ bool image_augmentation(const char* inputPath, const char* fileName){ //fileName
 	sprintf(buffer, "%s_test.jpg", fileName);
 	imwrite(buffer, newImage); // create the new image after rotation
 
-	//Crop the regions
-	cv::Point2f center = Point2f((newLandmarks[0].x+newLandmarks[1].x)/2., (newLandmarks[0].y+newLandmarks[1].y)/2.);
-	cv::Point2f oldCenter = Point2f((landmarks[0].x+landmarks[1].x)/2., (landmarks[0].y+landmarks[1].y)/2.);
-	cv::Size2f maxSize = Size2f((newLandmarks[1].x-newLandmarks[0].x)*2, (newLandmarks[1].x-newLandmarks[0].x)*3/2.);
-	vector<double> scales;
-	scales.push_back(1);
-	scales.push_back(0.8);
-	scales.push_back(0.5);
-	vector<Crop> ROIs = multiScaleROI(center, maxSize, scales, 0);
+	float eyesWidth = newLandmarks[1].x-newLandmarks[0].x;
+	//Crop the regions: eyes
+	cv::Point2f eyesCenter = Point2f((newLandmarks[0].x+newLandmarks[1].x)/2., (newLandmarks[0].y+newLandmarks[1].y)/2.);
+	cv::Point2f eyesOldCenter = Point2f((landmarks[0].x+landmarks[1].x)/2., (landmarks[0].y+landmarks[1].y)/2.);
+	cv::Size2f eyesMaxSize = Size2f(eyesWidth*2.5, eyesWidth*2.5*3/4.);
+	vector<double> eyesScales;
+	eyesScales.push_back(1);
+	eyesScales.push_back(0.8);
+	eyesScales.push_back(0.5);
 
-	//Check if a region intersect the bounding box of old image
-	vector<Crop> ROIsOnOI = multiScaleROI(oldCenter, maxSize, scales, -angle);
-	for (int i=0; i<ROIs.size(); i++){
-		double scale = imageContainsRect(image, ROIsOnOI[i]);
-		if (scale != -1){ // the ROI intersect
-			ROIs[i].size.width = ROIs[i].size.width*scale; // resize the ROI
-			ROIs[i].size.height = ROIs[i].size.height*scale;
-		}
+	cropMultiROI(fileName, "eyes", image, newImage, eyesCenter, eyesOldCenter, eyesMaxSize, eyesScales, angle);
 
-		Mat newROI = cropROI(newImage, ROIs[i]); // new cropped image
-		sprintf(buffer, "%s_testCropped_%.1f.jpg", fileName, scales[i]);
-		imwrite(buffer, newROI);
-	}
+	//Crop the regions: nose
+	cv::Point2f noseCenter = newLandmarks[2];
+	cv::Point2f noseOldCenter = landmarks[2];
+	cv::Size2f noseMaxSize = Size2f(eyesWidth*1.5, eyesWidth*1.5);
+	vector<double> noseScales;
+	noseScales.push_back(1);
+
+	cropMultiROI(fileName, "nose", image, newImage, noseCenter, noseOldCenter, noseMaxSize, noseScales, angle);
+
+	//Crop the full face
+	cv::Point2f fullCenter = newLandmarks[2];
+	cv::Point2f fullOldCenter = landmarks[2];
+	cv::Size2f fullMaxSize = Size2f(eyesWidth*2, eyesWidth*2*4/3.);
+	vector<double> fullScales;
+	fullScales.push_back(1);
+
+	cropMultiROI(fileName, "full", image, newImage, fullCenter, fullOldCenter, fullMaxSize, fullScales, angle);
+
 	return true;
 }
 
@@ -108,9 +115,14 @@ int main( int argc, char** argv ){
 		sprintf(imagePath, "%s/%s", personPath, imageNames[j].c_str());
 		mkdir(imagePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 		chdir(imagePath);// change working directory
-		image_augmentation(inputPath, imageNames[j].c_str());
+		try{
+			image_augmentation(inputPath, imageNames[j].c_str());
+		}catch (std::exception& e) {
+		    std::cerr << "Error occurred when processing on image "<<people[0]<<"/"<<imageNames[j]<<".jpg"<<endl;
+		  }
 	}
 
+	cout<<"Image pre-process completed"<<endl;
 	return 0;
 }
 
