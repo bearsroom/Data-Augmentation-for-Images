@@ -10,12 +10,14 @@
 #include "crop.hpp"
 
 // Crop the region of interest
-Mat cropROI(cv::Mat& image, struct Crop& crop){
+Mat cropROI(cv::Mat& image, struct Crop& crop) throw (const char*){
 	cv::Point2f topLeft(crop.center.x-crop.size.width/2., crop.center.y-crop.size.height/2.);
 	cv::Mat ROI;
 	if (0 <= topLeft.x && 0 <= crop.size.width && topLeft.x + crop.size.width <= image.cols && 0 <= topLeft.y && 0 <= crop.size.height && topLeft.y + crop.size.height <= image.rows){
 		ROI = image(Rect(topLeft, crop.size));
 	}
+	else
+		throw "Error when create the ROI for crop";
 	return ROI;
 }
 
@@ -108,8 +110,10 @@ bool cropMultiROI(const char* fileName, const char* ROIName, Mat image, Mat newI
 		Mat newROI = cropROI(newImage, ROIs[i]); // new cropped image
 		if (!newROI.empty()){
 			char buffer[100];
+			string bufferStr;
 			sprintf(buffer, "%s_%s_%.2f.jpg", fileName, ROIName, scales[i]);
-			imwrite(buffer, newROI);
+			bufferStr = buffer;
+			imwrite(bufferStr.c_str(), newROI);
 		}
 	}
 	return resize;

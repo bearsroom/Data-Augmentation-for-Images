@@ -36,7 +36,7 @@ struct Crop{ // represent a ROI
 };
 
 // Crop the region of interest
-Mat cropROI(cv::Mat& image, struct Crop& crop);
+Mat cropROI(cv::Mat& image, struct Crop& crop)throw (const char*);
 
 // judge whether the crop is in the image
 // -1 if the boundingRect is in the image

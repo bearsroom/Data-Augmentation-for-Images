@@ -120,7 +120,12 @@ void outputLandmarks(const char* filename, vector<cv::Point2f> landmarks, cv::Si
 bool copyFile(const char* SRC, const char* DEST)
 {
     std::ifstream src(SRC, std::ios::binary);
+    if (src.good()){ // if SRC existed and has no error
     std::ofstream dest(DEST, std::ios::binary);
-    dest << src.rdbuf();
-    return src && dest;
+    	dest << src.rdbuf();
+    	return dest.good(); // return true if DEST existed and has no error
+    }
+    else
+    	return false;
+
 }

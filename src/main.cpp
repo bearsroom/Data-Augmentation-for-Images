@@ -25,44 +25,52 @@ void myunexpected(){
 	throw "Unexpected error";
 }
 
-bool image_augmentation(const char* inputPath, const char* fileName) throw(const char*){ //fileName = id
-	set_unexpected(myunexpected);
+// return true if success
+bool readData(const char* fileName, cv::Mat& image, vector<cv::Point2f>& landmarks) throw(const char*){
 
-	Mat image;
 	char buffer[100];
-	char bufferInput[100];
-	sprintf(bufferInput, "%s/%s%s", inputPath, fileName, ".jpg");
-	image = imread(bufferInput, CV_LOAD_IMAGE_COLOR);
+	string bufferStr;
+	sprintf(buffer, "%s.jpg", fileName);
+	bufferStr = buffer;
+
+	image = imread(bufferStr.c_str(), CV_LOAD_IMAGE_COLOR);
 
 	if(!image.data){ // check if the image existed
+		cout<<"No image data "<<fileName<<".jpg"<<endl;
 		throw "No image data";
 		return false;
 	}
-	sprintf(buffer, "%s.jpg", fileName);
-	copyFile(bufferInput, buffer); // copy the original image
 
-	// check if the associated .cor file existed
 	sprintf(buffer, "%s.cor", fileName);
-	if (!searchFile(inputPath, buffer)){
-		throw "No landmarks data";
+	bufferStr = buffer;
+	landmarks = getLandmarks(bufferStr.c_str()); // get the landmarks from [id].cor file
+	int lmSize = landmarks.size();
+	if (lmSize != 5){
+		cout<<"Errors occurred when retrieving landmarks from "<<fileName<<".cor"<<endl;
+		throw "Errors occurred when retrieving landmarks";
 		return false;
 	}
 
-	sprintf(bufferInput, "%s/%s.cor", inputPath, fileName);
-	vector<cv::Point2f> landmarks = getLandmarks(bufferInput); // get the landmarks from [id].cor file
-	sprintf(buffer, "%s_old.cor", fileName);
-	copyFile(bufferInput, buffer); // copy the original [id].cor file
+	return true;
+}
+
+void image_augmentation(const char* fileName, cv::Mat image, vector<cv::Point2f> landmarks) throw(const char*){ //fileName = id
+
+	char buffer[100];
+	string bufferStr;
 
 	Mat newImage; // output image
 	double angle = calculateAngle(landmarks[0], landmarks[1]); // calculate the angle for rotation
 	cv::Mat rot = rotate(image, angle, newImage, landmarks); // rotate the image
 
 	vector<cv::Point2f> newLandmarks = coordinatesTransform(landmarks, rot); // calculate the new landmarks on new image after rotation
-	sprintf(buffer, "%s_new.cor", fileName);
-	outputLandmarks(buffer, newLandmarks, cv::Size2f(newImage.cols, newImage.rows)); // write new landmarks into [id]_new.cor file
+	sprintf(buffer, "%s_rotated.cor", fileName);
+	bufferStr = buffer;
+	outputLandmarks(bufferStr.c_str(), newLandmarks, cv::Size2f(newImage.cols, newImage.rows)); // write new landmarks into [id]_new.cor file
 
-	sprintf(buffer, "%s_test.jpg", fileName);
-	imwrite(buffer, newImage); // create the new image after rotation
+	sprintf(buffer, "%s_rotated.jpg", fileName);
+	bufferStr = buffer;
+	imwrite(bufferStr.c_str(), newImage); // create the new image after rotation
 
 	float eyesWidth = newLandmarks[1].x-newLandmarks[0].x;
 	//Crop the regions: eyes
@@ -75,10 +83,7 @@ bool image_augmentation(const char* inputPath, const char* fileName) throw(const
 	eyesScales.push_back(0.8);
 	eyesScales.push_back(0.7);
 
-	bool resize = cropMultiROI(fileName, "eyes", image, newImage, eyesCenter, eyesOldCenter, eyesMaxSize, eyesScales, angle);
-	if (resize == true){
-		throw "At least one ROI of eyes has been resized.";
-	}
+	bool resizeEyes = cropMultiROI(fileName, "eyes", image, newImage, eyesCenter, eyesOldCenter, eyesMaxSize, eyesScales, angle);
 
 	//Crop the regions: nose
 	cv::Point2f noseCenter = newLandmarks[2];
@@ -87,10 +92,7 @@ bool image_augmentation(const char* inputPath, const char* fileName) throw(const
 	vector<double> noseScales;
 	noseScales.push_back(1);
 
-	resize = cropMultiROI(fileName, "nose", image, newImage, noseCenter, noseOldCenter, noseMaxSize, noseScales, angle);
-	if (resize == true){
-			throw "At least one ROI of nose has been resized.";
-		}
+	bool resizeNose = cropMultiROI(fileName, "nose", image, newImage, noseCenter, noseOldCenter, noseMaxSize, noseScales, angle);
 
 	//Crop the full face
 	cv::Point2f fullCenter = newLandmarks[2];
@@ -99,17 +101,18 @@ bool image_augmentation(const char* inputPath, const char* fileName) throw(const
 	vector<double> fullScales;
 	fullScales.push_back(1);
 
-	resize = cropMultiROI(fileName, "full", image, newImage, fullCenter, fullOldCenter, fullMaxSize, fullScales, angle);
-	if (resize == true){
-			throw "At least one ROI of full face has been resized.";
+	bool resizeFull = cropMultiROI(fileName, "full", image, newImage, fullCenter, fullOldCenter, fullMaxSize, fullScales, angle);
+	if (resizeEyes || resizeNose || resizeFull){
+			throw "At least one ROI has been resized.";
 		}
 
-	return true;
+	return;
 }
 
 int main( int argc, char** argv ){
+	set_unexpected(myunexpected);
 
-	char* dbPath = "/home/yinghongli/Documents/DeepFace2";
+	const char* dbPath = "/home/yinghongli/Documents/DeepFace2";
 	const char* outputPath = "/home/yinghongli/Documents/DeepFace2Aug";
 	ofstream log1("/home/yinghongli/Documents/DeepFace2Aug/log.txt", fstream::app); // create a log file
 	log1<<"input Path: "<<dbPath<<endl;
@@ -119,7 +122,9 @@ int main( int argc, char** argv ){
 	people = getPathList(dbPath, false);
 	log1<<"Number of people: "<<people.size()<<endl<<endl;
 
+	// for every person
 	for (int i=0; i<people.size(); i++){
+		int numError = 0;
 		try{
 			vector<string> imageNames;
 			char inputPath[100];
@@ -130,26 +135,56 @@ int main( int argc, char** argv ){
 			sprintf(personPath, "%s/%s", outputPath, people[i].c_str());
 			mkdir(personPath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 			chdir(personPath);
-			cout<<"Current path: "<<personPath<<" "<<imageNames.size()<<" images"<<endl;
+			log1<<people[i]<<"/ : "<<imageNames.size()<<" images found"<<endl;
+			cout<<"Current input path: "<<inputPath<<" "<<imageNames.size()<<" images"<<endl;
+			cout<<"Current output path: "<<personPath<<endl<<endl;
 
 			ofstream logFile("log.txt", fstream::app); // create a log file
 			logFile<<"input Path: "<<inputPath<<endl;
 			logFile<<"output Path: "<<personPath<<endl<<endl;
 			char imagePath[100];
+
+			// for every image
 			for (int j=0; j<imageNames.size(); j++){
-				sprintf(imagePath, "%s/%s", personPath, imageNames[j].c_str());
+				const char* imageName = imageNames[j].c_str();
+				sprintf(imagePath, "%s/%s", personPath, imageName);
 				mkdir(imagePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 				chdir(imagePath);// change working directory
 				try{
-					image_augmentation(inputPath, imageNames[j].c_str());
+					// copy the original [id].jpg file
+					char imageInput[100];
+					char imageOutput[20];
+					sprintf(imageInput, "%s/%s.jpg", inputPath, imageName);
+					sprintf(imageOutput, "%s.jpg", imageName);
+					bool hasImage = copyFile(imageInput, imageOutput);
+
+					// copy the original [id].cor file
+					char corInput[100];
+					char corOutput[20];
+					sprintf(corInput, "%s/%s.cor", inputPath, imageName);
+					sprintf(corOutput, "%s.cor", imageName);
+					bool hasCor = copyFile(corInput, corOutput);
+
+					if (hasImage && hasCor){
+						cv::Mat image;
+						vector<cv::Point2f> landmarks;
+						bool success = readData(imageName, image, landmarks);
+						if (success)
+							image_augmentation(imageName, image, landmarks);
+					}
+					else{
+						numError++;
+						throw "Cannot find image or cor file in working directory";
+					}
 				}catch (const char* message) {
-					logFile<<imageNames[j]<<".jpg: "<<message<<endl;
+					logFile<<imageName<<".jpg: "<<message<<endl;
 				}
 			}
 			logFile.close();
 		}catch (const char* message){
 			log1<<people[i]<<"/ : "<<message<<endl;
 		}
+		log1<<people[i]<<"/ : "<<numError<<" image(s) non treated"<<endl<<endl;
 	}
 
 	log1.close();
